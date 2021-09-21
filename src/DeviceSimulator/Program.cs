@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -10,26 +11,31 @@ using Microsoft.Azure.Devices.Client;
 
 namespace DeviceSimulator
 {
-    class Program
+    partial class Program
     {
         static async Task Main(string[] args)
         {
-            var fileName = args.Length > 0 ? args[0] : "devices.txt";
-            Console.Write($"Loading devices from {fileName}... ");
-            var devices = File.ReadAllLines(fileName);
-            Console.WriteLine($"got {devices.Length} device(s)");
+            var deviceFile = args.FirstOrDefault();
+
+            if (!DeviceFileExists(deviceFile))
+            {
+                Console.WriteLine("Usage: DeviceSimulator.exe <path to file with device connection strings>");
+                return;
+            }
+
+            Console.Write($"Loading devices from {deviceFile}... ");
+            var devices = await GetDevices(deviceFile);
+            Console.WriteLine($"got {devices.Count} device(s)");
 
             var tokenSource = new CancellationTokenSource();
-            Console.CancelKeyPress += (object sender, ConsoleCancelEventArgs args) => 
-            {
-                args.Cancel = true;
-                tokenSource.Cancel();
-            };
+            Console.WriteLine("Starting to send messages, use ENTER to stop...");
+            var sendingTasks = devices.Select(device => SendMessages(device, tokenSource.Token)).ToList();
 
-            Console.WriteLine("Starting to send messages, use Ctrl+C to stop...");
-            var sendingTasks = devices.Select(device => SendMessages(device, tokenSource.Token));
+            Console.ReadLine();
+            Console.WriteLine("Stopping all tasks...");
+            tokenSource.Cancel();
 
-            try
+            try 
             {
                 await Task.WhenAll(sendingTasks);
             }
@@ -38,25 +44,38 @@ namespace DeviceSimulator
                 // this is expected
             }
 
-            Console.WriteLine("Exiting.");
+            // this is emberassing but the application keeps hanging
+            Console.WriteLine("Exiting, if the application doesn't stop in a timely fasion please use Ctrl+C.");
         }
 
-        static async Task SendMessages(string deviceConnectionString, CancellationToken cancellationToken)
+        private static bool DeviceFileExists(string deviceFile)
+        {
+            return !string.IsNullOrEmpty(deviceFile)
+                && File.Exists(deviceFile);
+        }
+
+        private static async Task<List<Device>> GetDevices(string deviceFile)
+        {
+            var json = await File.ReadAllTextAsync(deviceFile);
+            var devices = JsonSerializer.Deserialize<List<Device>>(json);
+            return devices;
+        }
+
+        static async Task SendMessages(Device device, CancellationToken cancellationToken)
         {
             var random = new Random();
-            var deviceId = deviceConnectionString.Split(';').Select(x => x.Split('=')).ToDictionary(x => x[0], x => x[1])["DeviceId"];
-            Console.WriteLine($"{deviceId} is starting...");
+            Console.WriteLine($"{device.DeviceId} is starting...");
 
-            using var deviceClient = DeviceClient.CreateFromConnectionString(deviceConnectionString, TransportType.Mqtt);
+            using var deviceClient = DeviceClient.CreateFromConnectionString(device.ConnectionString, TransportType.Mqtt);
 
             while (!cancellationToken.IsCancellationRequested)
             {
                 var value = random.NextDouble();
                 var payload = new Payload { Value = value };
                 var json = JsonSerializer.Serialize(payload);
-                Console.WriteLine($"{deviceId} is sending '{json}'");
+                Console.WriteLine($"{device.DeviceId} is sending '{json}'");
 
-                var message = new Message(Encoding.UTF8.GetBytes(json))
+                using var message = new Message(Encoding.UTF8.GetBytes(json))
                 {
                     ContentType = "application/json",
                     ContentEncoding = "utf-8"
@@ -67,11 +86,6 @@ namespace DeviceSimulator
                 var delayMs = random.Next(360, 3600);
                 await Task.Delay(delayMs, cancellationToken);
             }
-        }
-
-        class Payload
-        {
-            public double Value { get; set; }
         }
     }
 }

@@ -7,7 +7,7 @@ param(
     [int]$DeviceCount = 3,
     [string]$StorageAccountName = "tatostorage",
     [string]$TsiEnvironmentName = "tatotsi",
-    [string]$OutputFile
+    [string]$OutputFile = "devices.txt"
 )
 
 Import-Module Az
@@ -16,7 +16,7 @@ Import-Module Az.TimeSeriesInsights
 function Main
 {
     Write-Host "Connecting..."
-    #Connect-AzAccount
+    Connect-AzAccount
 
     if (-not [string]::IsNullOrEmpty($SubscriptionId))
     {
@@ -29,8 +29,8 @@ function Main
     Write-Host "Creating IoT Hub $IotHubName"
     CreateHub
 
-    Write-Host "Creating storage account $StorageAccountName"
-    CreateStorageAccount
+    #Write-Host "Creating storage account $StorageAccountName"
+    #CreateStorageAccount
 
     Write-Host "Creating $DeviceCount IoT devices..."
     CreateDevices
@@ -42,8 +42,8 @@ function Main
         Write-Host ""
     } 
     
-    Write-Host "Creating TSI environment $TsiEnvironmentName"
-    CreateTsiEnvironment
+    #Write-Host "Creating TSI environment $TsiEnvironmentName"
+    #CreateTsiEnvironment
 
     Write-Host "Done."
 }
@@ -67,7 +67,7 @@ function CreateTsiEnvironment
             -Sku "L1" `
             -StorageAccountName $StorageAccountName `
             -StorageAccountKey $accountKey `
-            #-WarmStoreDataRetentionTime (New-TimeSpan -Days 7)
+            -WarmStoreDataRetentionTime (New-TimeSpan -Days 7)
             -TimeSeriesIdProperty @{name='iothub-connection-device-id';type='string'}
     }
 

@@ -9,10 +9,4 @@
     <PackageReference Include="Microsoft.Azure.Devices.Client" Version="1.38.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="devices.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>  
-
 </Project>

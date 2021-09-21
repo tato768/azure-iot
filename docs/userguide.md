@@ -20,8 +20,6 @@ Simple device simulator application is provided to send messages to Azure IoT hu
 
 [Download .NET Core 3.1 (Linux, macOS, and Windows)](https://dotnet.microsoft.com/download/dotnet/3.1)
 
-# How deploy and run
-
 # Deployment of Azure resources
 
 Start a powershell 7 session in `deployment/` and run following command:
@@ -64,4 +62,30 @@ How many IoT devices should be created in the hub. Default values is `3`. Device
 Devices will be names using _\<prefix\>\<number\>_ scheme, where prefix is customizable and number is a sequence starting at `1`. Default value for prefix is `tatodevice`.
 
 ### -OutputFile
-Name of the file where Device simulator requires connection strings for all devices in order to connect and send messages. 
+Name of the file where all device connection strings will be exported. Device simulator requires connection strings of all devices in order to connect and send messages. Default value is `devices.txt`.
+
+# Running the Device simulator app
+
+Start a command line in `src/DeviceSimulator/` and run following command:
+```
+dotnet run ..\..\deployment\devices.txt
+```
+Please note that the first parameter is path to the file generated in deployment step.
+
+Sample output:
+```
+Loading devices from ..\..\deployment\devices.txt... got 3 device(s)
+Starting to send messages, use ENTER to stop...
+tatodevice3 is starting...
+tatodevice3 is sending '{"Value":0.729583379686616}'
+tatodevice2 is starting...
+tatodevice2 is sending '{"Value":0.8290573036433464}'
+tatodevice1 is starting...
+tatodevice1 is sending '{"Value":0.31187419002497296}'
+tatodevice2 is sending '{"Value":0.6397306936046717}'
+tatodevice3 is sending '{"Value":0.6556636051534039}'
+tatodevice2 is sending '{"Value":0.7802519531828593}'
+tatodevice1 is sending '{"Value":0.2003944521771718}'
+```
+
+You can check that the messages are received in the cloud by checking the overview page of your IoT hub resource.
